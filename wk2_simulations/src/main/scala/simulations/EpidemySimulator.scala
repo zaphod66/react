@@ -87,39 +87,78 @@ class EpidemySimulator extends Simulator {
       var nextRow = row
       var nextCol = col
       
-      if (!dead) {
-          if (moveDirection == 0) {
-            nextRow = ( row - 1 ) % roomRows    // up
-            nextCol = col
-          } else if (moveDirection == 1) {
-            nextRow = row                       // right
-            nextCol = ( col + 1 ) % roomColumns
-          } else if (moveDirection == 2) {
-            nextRow = ( row + 1 ) % roomRows    // down
-            nextCol = col
-          } else if (moveDirection == 3) {
-            nextRow = row                       // left
-            nextCol = ( col - 1 ) % roomColumns        
-          }
-         
-          if (nextRow < 0) nextRow = roomRows - 1
-          if (nextCol < 0) nextCol = roomColumns -1
-    
-          if (!isRoomSick(nextRow, nextCol)) {
-            row = nextRow
-            col = nextCol
-          }
-          
+      var healthRooms = List[(Int,Int)]()
+      
+      // up
+      nextRow = decRow(row)
+      nextCol = col
+      if (!isRoomSick(nextRow,nextCol)) healthRooms = (nextRow,nextCol) :: healthRooms
+      
+      // right
+      nextRow = row
+      nextCol = incCol(col)
+      if (!isRoomSick(nextRow,nextCol)) healthRooms = (nextRow,nextCol) :: healthRooms
+      
+      // down
+      nextRow = incRow(row)
+      nextCol = col
+      if (!isRoomSick(nextRow,nextCol)) healthRooms = (nextRow,nextCol) :: healthRooms
+      
+      // left
+      nextRow = row
+      nextCol = decCol(col)
+      if (!isRoomSick(nextRow,nextCol)) healthRooms = (nextRow,nextCol) :: healthRooms
+
+      if (!healthRooms.isEmpty) {
+        val r = randomBelow(healthRooms.size)
+        val d = healthRooms(r)
+        
+        row = d._1
+        col = d._2
+        
           if (isRoomInfected(row, col)) {
-            val transmission = randomBelow(100) <= 100 * transRate
+            val transmission = randomBelow(100) < 100 * transRate
             if (transmission) {
               infectedAction
             }
           }
-          
-          action
       }
+      
+      action
     }
+//      if (!dead) {
+//          if (moveDirection == 0) {
+//            nextRow = ( row - 1 ) % roomRows    // up
+//            nextCol = col
+//          } else if (moveDirection == 1) {
+//            nextRow = row                       // right
+//            nextCol = ( col + 1 ) % roomColumns
+//          } else if (moveDirection == 2) {
+//            nextRow = ( row + 1 ) % roomRows    // down
+//            nextCol = col
+//          } else if (moveDirection == 3) {
+//            nextRow = row                       // left
+//            nextCol = ( col - 1 ) % roomColumns        
+//          }
+//         
+//          if (nextRow < 0) nextRow = roomRows - 1
+//          if (nextCol < 0) nextCol = roomColumns -1
+//    
+//          if (!isRoomSick(nextRow, nextCol)) {
+//            row = nextRow
+//            col = nextCol
+//          }
+//          
+//          if (isRoomInfected(row, col)) {
+//            val transmission = randomBelow(100) <= 100 * transRate
+//            if (transmission) {
+//              infectedAction
+//            }
+//          }
+//          
+//          action
+//      }
+//    }
     
     def isRoomInfected(row:Int, col: Int): Boolean = {
       val infectedPersons = for {
@@ -137,6 +176,28 @@ class EpidemySimulator extends Simulator {
       } yield p
       
       !sickPersons.isEmpty
+    }
+    
+    def decRow(row: Int): Int = {
+      var nextRow = (row - 1)
+      if (nextRow < 0) nextRow = roomRows - 1
+
+      nextRow
+    }
+    
+    def incRow(row: Int): Int = {
+      (row + 1) % roomRows
+    }
+    
+    def decCol(col: Int): Int = {
+      var nextCol = col - 1
+      if (nextCol < 0) nextCol = roomColumns - 1
+
+      nextCol
+    }
+    
+    def incCol(col: Int): Int = {
+      (col + 1) % roomColumns
     }
     
     override def toString(): String = {
