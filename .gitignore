@@ -1,0 +1,10 @@
+*.un~
+*.swp
+tags
+target
+project/boot
+.history
+*/.cache
+*.cache
+project.vim
+*.old
