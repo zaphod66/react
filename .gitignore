@@ -6,5 +6,6 @@ project/boot
 .history
 */.cache
 /.cache
+wk2_simulations/.cache
 project.vim
 *.old
