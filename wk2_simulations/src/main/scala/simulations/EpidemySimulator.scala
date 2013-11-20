@@ -66,7 +66,7 @@ class EpidemySimulator extends Simulator {
     def moveAction() {
       val moveDirection = randomBelow(3)
       val moveDelay = randomBelow(5)
-      afterDelay(moveDelay){ move(moveDirection) }
+      afterDelay(moveDelay + 1){ move(moveDirection) }
     }
     
     def infectedAction() {

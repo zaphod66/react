@@ -19,6 +19,8 @@ class Wire {
     actions = a :: actions
     a()
   }
+  
+  override def toString() = "Wire(" + sigVal + ")"  
 }
 
 abstract class CircuitSimulator extends Simulator {
@@ -101,11 +103,12 @@ abstract class CircuitSimulator extends Simulator {
     def demuxAction() {
       val inSig = in.getSignal
       val idx = calcIdx(c, 0)
-      for (i <- 0 to out.size - 1) {
+      val siz = out.size - 1
+      for (i <- 0 to siz) {
         if (i == idx) {
-          afterDelay(0) { out(i).setSignal(inSig) }
+          afterDelay(0) { out(siz - i).setSignal(inSig) }
         } else {
-          afterDelay(0) { out(i).setSignal(false) }
+          afterDelay(0) { out(siz - i).setSignal(false) }
         }
       }
     }

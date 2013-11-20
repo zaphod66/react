@@ -107,14 +107,14 @@ class CircuitSuite extends CircuitSimulator with FunSuite {
     c(0).setSignal(false)
     run
     
-    assert(out(0).getSignal === in.getSignal, "demux #c = 1 0.0")
-    assert(out(1).getSignal === false,        "demux #c = 1 0.1")
+    assert(out(0).getSignal === false,        "demux #c = 1 0.0")
+    assert(out(1).getSignal === in.getSignal, "demux #c = 1 0.1")
 
     c(0).setSignal(true)
     run
     
-    assert(out(0).getSignal === false,        "demux #c = 1 1.0")
-    assert(out(1).getSignal === in.getSignal, "demux #c = 1 1.1")
+    assert(out(0).getSignal === in.getSignal, "demux #c = 1 1.0")
+    assert(out(1).getSignal === false,        "demux #c = 1 1.1")
   }
   
   test("demux test 2 c") {
@@ -131,10 +131,10 @@ class CircuitSuite extends CircuitSimulator with FunSuite {
     c(1).setSignal(false)
     run
     
-    assert(out(0).getSignal === in.getSignal, "demux #c = 2 0.0")
+    assert(out(0).getSignal === false,        "demux #c = 2 0.0")
     assert(out(1).getSignal === false,        "demux #c = 2 0.1")
     assert(out(2).getSignal === false,        "demux #c = 2 0.2")
-    assert(out(3).getSignal === false,        "demux #c = 2 0.3")
+    assert(out(3).getSignal === in.getSignal, "demux #c = 2 0.3")
 
     // 1
     c(0).setSignal(false)
@@ -142,8 +142,8 @@ class CircuitSuite extends CircuitSimulator with FunSuite {
     run
     
     assert(out(0).getSignal === false,        "demux #c = 2 1.0")
-    assert(out(1).getSignal === in.getSignal, "demux #c = 2 1.1")
-    assert(out(2).getSignal === false,        "demux #c = 2 1.2")
+    assert(out(1).getSignal === false,        "demux #c = 2 1.1")
+    assert(out(2).getSignal === in.getSignal, "demux #c = 2 1.2")
     assert(out(3).getSignal === false,        "demux #c = 2 1.3")
 
     // 2
@@ -152,18 +152,90 @@ class CircuitSuite extends CircuitSimulator with FunSuite {
     run
     
     assert(out(0).getSignal === false,        "demux #c = 2 2.0")
-    assert(out(1).getSignal === false,        "demux #c = 2 2.1")
-    assert(out(2).getSignal === in.getSignal, "demux #c = 2 2.2")
+    assert(out(1).getSignal === in.getSignal, "demux #c = 2 2.1")
+    assert(out(2).getSignal === false,        "demux #c = 2 2.2")
     assert(out(3).getSignal === false,        "demux #c = 2 2.3")
 
     // 3
-    c(0).setSignal(true)
+    c(1).setSignal(true)
     c(1).setSignal(true)
     run
     
-    assert(out(0).getSignal === false,        "demux #c = 2 3.0")
+    assert(out(0).getSignal === in.getSignal, "demux #c = 2 3.0")
     assert(out(1).getSignal === false,        "demux #c = 2 3.1")
     assert(out(2).getSignal === false,        "demux #c = 2 3.2")
-    assert(out(3).getSignal === in.getSignal, "demux #c = 2 3.3")
+    assert(out(3).getSignal === false,        "demux #c = 2 3.3")
   }
+  
+  test("demux test 3 c") {
+    val in  = new Wire
+    val c   = List(new Wire, new Wire, new Wire)
+    val out = List(new Wire, new Wire, new Wire, new Wire, new Wire, new Wire, new Wire, new Wire)
+    
+    demux(in, c, out)
+    
+    in.setSignal(true)
+    
+    // 0
+    c(0).setSignal(false)
+    c(1).setSignal(false)
+    c(2).setSignal(false)
+    run
+    
+    assert(out(0).getSignal === false,        "demux #c = 3 0.0")
+    assert(out(1).getSignal === false,        "demux #c = 3 0.1")
+    assert(out(2).getSignal === false,        "demux #c = 3 0.2")
+    assert(out(3).getSignal === false,        "demux #c = 3 0.3")
+    assert(out(4).getSignal === false,        "demux #c = 3 0.4")
+    assert(out(5).getSignal === false,        "demux #c = 3 0.5")
+    assert(out(6).getSignal === false,        "demux #c = 3 0.6")
+    assert(out(7).getSignal === in.getSignal, "demux #c = 3 0.7")
+
+    // 1
+    c(0).setSignal(false)
+    c(1).setSignal(false)
+    c(2).setSignal(true)
+    run
+    
+    assert(out(0).getSignal === false,        "demux #c = 3 1.0")
+    assert(out(1).getSignal === false,        "demux #c = 3 1.1")
+    assert(out(2).getSignal === false,        "demux #c = 3 1.2")
+    assert(out(3).getSignal === false,        "demux #c = 3 1.3")
+    assert(out(4).getSignal === false,        "demux #c = 3 1.4")
+    assert(out(5).getSignal === false,        "demux #c = 3 1.5")
+    assert(out(6).getSignal === in.getSignal, "demux #c = 3 1.6")
+    assert(out(7).getSignal === false,        "demux #c = 3 1.7")
+
+    // 4
+    c(0).setSignal(true)
+    c(1).setSignal(false)
+    c(2).setSignal(false)
+    run
+    
+    assert(out(0).getSignal === false,        "demux #c = 3 1.0")
+    assert(out(1).getSignal === false,        "demux #c = 3 1.1")
+    assert(out(2).getSignal === false,        "demux #c = 3 1.2")
+    assert(out(3).getSignal === in.getSignal, "demux #c = 3 1.3")
+    assert(out(4).getSignal === false,        "demux #c = 3 1.4")
+    assert(out(5).getSignal === false,        "demux #c = 3 1.5")
+    assert(out(6).getSignal === false,        "demux #c = 3 1.6")
+    assert(out(7).getSignal === false,        "demux #c = 3 1.7")
+
+    // 2
+    c(0).setSignal(false)
+    c(1).setSignal(true)
+    c(2).setSignal(false)
+    run
+    
+    assert(out(0).getSignal === false,        "demux #c = 3 2.0")
+    assert(out(1).getSignal === false,        "demux #c = 3 2.1")
+    assert(out(2).getSignal === false,        "demux #c = 3 2.2")
+    assert(out(3).getSignal === false,        "demux #c = 3 2.3")
+    assert(out(4).getSignal === false,        "demux #c = 3 2.4")
+    assert(out(5).getSignal === in.getSignal, "demux #c = 3 2.5")
+    assert(out(6).getSignal === false,        "demux #c = 3 2.6")
+    assert(out(7).getSignal === false,        "demux #c = 3 2.7")
+
+
+  }  
 }
