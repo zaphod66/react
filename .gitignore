@@ -5,6 +5,6 @@ target
 project/boot
 .history
 */.cache
-*.cache
+/.cache
 project.vim
 *.old
