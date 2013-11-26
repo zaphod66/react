@@ -17,7 +17,7 @@ package object nodescala {
 
     /** Returns a future that is always completed with `value`.
      */
-    def always[T](value: T): Future[T] = future { value }
+    def always[T](value: T): Future[T] = Future { value }
 
     /** Returns a future that is never completed.
      *
@@ -68,7 +68,7 @@ package object nodescala {
     def delay(t: Duration): Future[Unit] = {
       val p = Promise[Unit]()
       val f = Future{ blocking{ Thread.sleep(t.toMillis) } }
-      f  onComplete { p.tryComplete(_) }
+      f onComplete { p.tryComplete(_) }
 
       p.future
     }
@@ -81,8 +81,13 @@ package object nodescala {
 
     /** Creates a cancellable context for an execution and runs it.
      */
-    def run()(f: CancellationToken => Future[Unit]): Subscription = ???
-
+    def run()(f: CancellationToken => Future[Unit]): Subscription = {
+      val cts = CancellationTokenSource()
+      f(cts.cancellationToken)
+      
+      cts
+    }
+      
   }
 
   /** Adds extension methods to future objects.
@@ -97,7 +102,15 @@ package object nodescala {
      *  However, it is also non-deterministic -- it may throw or return a value
      *  depending on the current state of the `Future`.
      */
-    def now: T = ???
+    def now: T = {
+      val v = f.value
+      v match {
+        case None             => throw new NoSuchElementException()
+    //  case Some(Failure(e)) => throw new NoSuchElementException(e.getMessage())
+        case Some(Failure(e)) => throw e
+        case Some(Success(t)) => t
+      }
+    }
 
     /** Continues the computation of this future by taking the current future
      *  and mapping it into another future.
