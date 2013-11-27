@@ -87,7 +87,6 @@ package object nodescala {
       
       cts
     }
-      
   }
 
   /** Adds extension methods to future objects.
@@ -106,7 +105,6 @@ package object nodescala {
       val v = f.value
       v match {
         case None             => throw new NoSuchElementException()
-    //  case Some(Failure(e)) => throw new NoSuchElementException(e.getMessage())
         case Some(Failure(e)) => throw e
         case Some(Success(t)) => t
       }
@@ -118,15 +116,25 @@ package object nodescala {
      *  The function `cont` is called only after the current future completes.
      *  The resulting future contains a value returned by `cont`.
      */
-    def continueWith[S](cont: Future[T] => S): Future[S] = ???
-
+    def continueWith[S](cont: Future[T] => S): Future[S] = {
+      val p = Promise[S]()
+      f onComplete { _ => p.complete( Try { cont(f) })}
+      
+      p.future
+    }
+    
     /** Continues the computation of this future by taking the result
      *  of the current future and mapping it into another future.
      *  
      *  The function `cont` is called only after the current future completes.
      *  The resulting future contains a value returned by `cont`.
      */
-    def continue[S](cont: Try[T] => S): Future[S] = ???
+    def continue[S](cont: Try[T] => S): Future[S] = {
+      val p = Promise[S]()
+      f onComplete { result => p.complete( Try { cont(result)}) }
+      
+      p.future
+    }
 
   }
 
