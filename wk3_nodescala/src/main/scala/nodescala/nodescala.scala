@@ -53,7 +53,7 @@ trait NodeScala {
     Future.run() { ct =>
       async {
         while (ct.nonCancelled) {
-          val (req, xchg) = await { listener nextRequest }
+          val (req, xchg) = await { listener.nextRequest() }
           respond(xchg, ct, handler(req))
         }
         listenerSubscription.unsubscribe()
@@ -132,7 +132,7 @@ object NodeScala {
       val p = Promise[(Request, Exchange)]()
       
       def handler(e: Exchange) = {
-        p success ((e.request, e))
+        p.success((e.request, e))
         removeContext()
       }
 
