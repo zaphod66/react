@@ -86,36 +86,54 @@ abstract class CircuitSimulator extends Simulator {
     a2 addAction orAction
   }
 
-  def calcIdx(c: List[Wire], idx: Int): Int = {
-    if (c.isEmpty) {
-      idx
-    } else {
-      val iSig = c.head.getSignal
-      if (iSig) {
-        calcIdx(c.tail, 2 * idx + 1)
-      } else {
-        calcIdx(c.tail, 2 * idx + 0)
-      }      
+  def demux(in: Wire, c: List[Wire], out: List[Wire]) {
+    c match {
+      case Nil => andGate(in, in, out(0))
+      case x::xs => {
+        // Refer to the diagram
+        val inL, inR, notX = new Wire
+        
+        andGate(in, x, inL)
+        inverter(x, notX)
+        andGate(in, notX, inR)
+
+        val n = out.length / 2
+        demux(inL, xs, out take n)
+        demux(inR, xs, out drop n)
+      }
     }
   }
   
-  def demux(in: Wire, c: List[Wire], out: List[Wire]) {
-    def demuxAction() {
-      val inSig = in.getSignal
-      val idx = calcIdx(c, 0)
-      val siz = out.size - 1
-      for (i <- 0 to siz) {
-        if (i == idx) {
-          afterDelay(0) { out(siz - i).setSignal(inSig) }
-        } else {
-          afterDelay(0) { out(siz - i).setSignal(false) }
-        }
-      }
-    }
-    
-    in addAction demuxAction
-    c  foreach {_ addAction demuxAction}
-  }
+//  def calcIdx(c: List[Wire], idx: Int): Int = {
+//    if (c.isEmpty) {
+//      idx
+//    } else {
+//      val iSig = c.head.getSignal
+//      if (iSig) {
+//        calcIdx(c.tail, 2 * idx + 1)
+//      } else {
+//        calcIdx(c.tail, 2 * idx + 0)
+//      }      
+//    }
+//  }
+//
+//  def demux(in: Wire, c: List[Wire], out: List[Wire]) {
+//    def demuxAction() {
+//      val inSig = in.getSignal
+//      val idx = calcIdx(c, 0)
+//      val siz = out.size - 1
+//      for (i <- 0 to siz) {
+//        if (i == idx) {
+//          afterDelay(0) { out(siz - i).setSignal(inSig) }
+//        } else {
+//          afterDelay(0) { out(siz - i).setSignal(false) }
+//        }
+//      }
+//    }
+//    
+//    in addAction demuxAction
+//    c  foreach {_ addAction demuxAction}
+//  }
 }
 
 object Circuit extends CircuitSimulator {
