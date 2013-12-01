@@ -6,6 +6,7 @@ import language.postfixOps
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.mutable
 import scala.util.{Try, Success, Failure}
 import rx.lang.scala._
 import org.scalatest._
@@ -67,4 +68,17 @@ class WikipediaApiTest extends FunSuite {
     }
     assert(total == (1 + 1 + 2 + 1 + 2 + 3), s"Sum: $total")
   }
+  
+  test("timedOut 1") {
+    val observed = mutable.Buffer[Int]()
+    Observable[Int](1,2,3).timedOut(2) subscribe {
+      observed += _
+    }
+    assert(observed === Seq(1,2,3))
+  }
+
+  test("timedOut 2") {
+    val stream = Observable(1 to 100).zip(Observable.interval(700 millis))
+    assert(stream.timedOut(1).toBlockingObservable.toList === List((1,0)))
+  }  
 }

@@ -13,6 +13,7 @@ import rx.lang.scala.Observable
 import rx.lang.scala._
 import rx.lang.scala.subscriptions._
 import scala.swing.Reactions.Reaction
+import rx.lang.scala.subjects.PublishSubject
 
 /** Basic facilities for dealing with Swing-like components.
 *
@@ -54,20 +55,27 @@ trait SwingApi {
       * @param field the text field
       * @return an observable with a stream of text field updates
       */
-    def textValues: Observable[String] = {
-      val observable = Observable((observer: Observer[String]) => {
-        val reaction: Reaction = {
-          case ValueChanged(vc) => observer.onNext(vc.text)
-          case _                =>
-        }
-        
-        field.subscribe(reaction)
+//    def textValues: Observable[String] = {
+//      val observable = Observable((observer: Observer[String]) => {
+//        val reaction: Reaction = {
+//          case ValueChanged(vc) => observer.onNext(vc.text)
+//          case _                =>
+//        }
+//        
+//        field.subscribe(reaction)
+//
+//        Subscription{ }
+//      })
+//      
+//      observable
+//    }
 
-        Subscription{ }
-      })
-      
-      observable
-    }
+    def textValues: Observable[String] = {
+      val subject = PublishSubject[String]("")
+      field.subscribe( { case ValueChanged(v) => subject.onNext(v.text) } )
+
+      subject
+    }    
   }
 
   implicit class ButtonOps(button: Button) {
@@ -77,20 +85,26 @@ trait SwingApi {
      * @param field the button
      * @return an observable with a stream of buttons that have been clicked
      */
+//    def clicks: Observable[Button] = {
+//      val observable = Observable((observer: Observer[Button]) => {
+//        val reaction: Reaction = {
+//          case ButtonClicked(bt) => observer.onNext(bt)
+//          case _                 =>
+//        }
+//        
+//        button.subscribe(reaction)
+//        
+//        Subscription {}
+//      })
+//      
+//      observable
+//    }
+    
     def clicks: Observable[Button] = {
-      val observable = Observable((observer: Observer[Button]) => {
-        val reaction: Reaction = {
-          case ButtonClicked(bt) => observer.onNext(bt)
-          case _                 =>
-        }
-        
-        button.subscribe(reaction)
-        
-        Subscription {}
-      })
-      
-      observable
+      val subject = PublishSubject[Button](button)
+      button.subscribe( { case ButtonClicked(b) => subject.onNext(b) } )
+  
+      subject
     }
   }
-
 }
