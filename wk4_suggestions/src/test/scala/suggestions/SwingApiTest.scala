@@ -1,7 +1,5 @@
 package suggestions
 
-
-
 import scala.collection._
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -107,5 +105,5 @@ class SwingApiTest extends FunSuite {
     textField.text = "Turing"
 
     assert(observed === Seq("T", "Tu", "Tur"), observed)
-  }  
+  }
 }
