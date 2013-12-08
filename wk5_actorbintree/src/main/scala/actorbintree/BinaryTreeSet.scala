@@ -66,7 +66,12 @@ class BinaryTreeSet extends Actor {
 
   // optional
   /** Accepts `Operation` and `GC` messages. */
-  val normal: Receive = { case _ => ??? }
+  val normal: Receive = {
+    case Insert(requester, id, elem)   => root ! Insert(requester, id, elem)
+    case Contains(requester, id, elem) => root ! Contains(requester, id, elem)
+    case Remove(requester, id, elem)   => root ! Remove(requester, id, elem)
+    case GC => ???
+  }
 
   // optional
   /** Handles messages while garbage collection is performed.
@@ -74,7 +79,7 @@ class BinaryTreeSet extends Actor {
     * all non-removed elements into.
     */
   def garbageCollecting(newRoot: ActorRef): Receive = ???
-
+  
 }
 
 object BinaryTreeNode {
@@ -101,8 +106,56 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
 
   // optional
   /** Handles `Operation` messages and `CopyTo` requests. */
-  val normal: Receive = { case _ => ??? }
+  val normal: Receive = {
+    case Insert(requester, id, e) =>
+      {
+        if (e == elem) {
+          removed = false;
+          requester ! OperationFinished(id)
+        } else {
+          val nextPos = nextBranch(e: Int)  // Left or Right
+          if (subtrees.contains(nextPos)) {
+            subtrees(nextPos) ! Insert(requester, id, e)
+          } else {
+            val newAct = context.actorOf(props(e, initiallyRemoved = false))
+            subtrees = subtrees.updated(nextPos, newAct)
+            requester ! OperationFinished(id)
+          }
+        }
+      }
+    case Contains(requester, id, e) =>
+      {
+        if (e == elem) {
+          requester ! ContainsResult(id, !removed)
+        } else {
+          val nextPos = nextBranch(e: Int)  // Left or Right
+          if (subtrees.contains(nextPos)) {
+            subtrees(nextPos) ! Contains(requester, id, e)
+          } else {
+            requester ! ContainsResult(id, result = false)
+          }
+        }
+      }
+    case Remove(requester, id, e) =>
+      {
+        if (e == elem) {
+          removed = true
+          requester ! OperationFinished(id)
+        } else {
+           val nextPos = nextBranch(e: Int)  // Left or Right
+          if (subtrees.contains(nextPos)) {
+            subtrees(nextPos) ! Remove(requester, id, e)
+          } else {
+            requester ! OperationFinished(id)
+          }
+        }        
+      }
+    
+    case _ => ???
+  }
 
+  def nextBranch(e: Int) = if (e < elem) Left else Right
+  
   // optional
   /** `expected` is the set of ActorRefs whose replies we are waiting for,
     * `insertConfirmed` tracks whether the copy of this node to the new tree has been confirmed.
