@@ -119,6 +119,8 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
   // optional
   def receive = normal
 
+  def copyOpId = -1
+  
   // optional
   /** Handles `Operation` messages and `CopyTo` requests. */
   val normal: Receive = {
@@ -170,7 +172,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
         val children = subtrees.values
         
         if (!removed) {
-          newRoot ! Insert(self, -1, elem)
+          newRoot ! Insert(self, copyOpId, elem)
           context.become(copying(children.toSet, false))
         } else if (children.isEmpty) {
           context.parent ! CopyFinished
@@ -190,7 +192,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     * `insertConfirmed` tracks whether the copy of this node to the new tree has been confirmed.
     */
   def copying(expected: Set[ActorRef], insertConfirmed: Boolean): Receive = {
-    case OperationFinished(-1) =>
+    case OperationFinished(copyOpId) =>
       checkFinished(expected, true)
     case CopyFinished =>
       checkFinished(expected - sender, insertConfirmed)    
