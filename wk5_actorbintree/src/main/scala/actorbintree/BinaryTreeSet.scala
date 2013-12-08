@@ -70,7 +70,11 @@ class BinaryTreeSet extends Actor {
     case Insert(requester, id, elem)   => root ! Insert(requester, id, elem)
     case Contains(requester, id, elem) => root ! Contains(requester, id, elem)
     case Remove(requester, id, elem)   => root ! Remove(requester, id, elem)
-    case GC => ???
+    case GC => {
+      val newRoot = createRoot
+      context.become(garbageCollecting(newRoot))
+      root ! CopyTo(newRoot)
+    }
   }
 
   // optional
@@ -78,8 +82,19 @@ class BinaryTreeSet extends Actor {
     * `newRoot` is the root of the new binary tree where we want to copy
     * all non-removed elements into.
     */
-  def garbageCollecting(newRoot: ActorRef): Receive = ???
+  def garbageCollecting(newRoot: ActorRef): Receive = {
+    case msg: Operation => pendingQueue = pendingQueue.enqueue(msg)
   
+    case GC => ()
+    
+    case CopyFinished => {
+      root ! PoisonPill
+      pendingQueue.foreach { newRoot ! _ }
+      pendingQueue = Queue.empty[Operation]
+      root = newRoot
+      context.unbecome()
+    }
+  }  
 }
 
 object BinaryTreeNode {
@@ -150,7 +165,21 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           }
         }        
       }
-    
+    case CopyTo(newRoot) =>
+      {
+        val children = subtrees.values
+        
+        if (!removed) {
+          newRoot ! Insert(self, -1, elem)
+          context.become(copying(children.toSet, false))
+        } else if (children.isEmpty) {
+          context.parent ! CopyFinished
+        } else {
+          context.become(copying(children.toSet, true))
+        }
+
+        children.foreach { _ ! CopyTo(newRoot) }        
+      }
     case _ => ???
   }
 
@@ -160,6 +189,20 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
   /** `expected` is the set of ActorRefs whose replies we are waiting for,
     * `insertConfirmed` tracks whether the copy of this node to the new tree has been confirmed.
     */
-  def copying(expected: Set[ActorRef], insertConfirmed: Boolean): Receive = ???
+  def copying(expected: Set[ActorRef], insertConfirmed: Boolean): Receive = {
+    case OperationFinished(-1) =>
+      checkFinished(expected, true)
+    case CopyFinished =>
+      checkFinished(expected - sender, insertConfirmed)    
+  }
 
+  def checkFinished(expected: Set[ActorRef], insertConfirmed: Boolean): Unit = {
+    if(expected.isEmpty && insertConfirmed) {
+      context.unbecome()
+      context.parent ! CopyFinished
+      subtrees.values.foreach { _ ! PoisonPill }
+    } else {
+      context.become(copying(expected, insertConfirmed))
+    }
+  }    
 }

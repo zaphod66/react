@@ -86,6 +86,18 @@ class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSui
     verify(requester, ops, expectedReplies)
   }
   
+  test("call GC without Garbage") {
+    val topNode = system.actorOf(Props[BinaryTreeSet])
+    
+    topNode ! Insert(testActor, id=42, 42)
+    expectMsg(OperationFinished(id=42))
+    topNode ! Contains(testActor, id=43, 42)
+    expectMsg(ContainsResult(id=43, true))
+    topNode ! GC
+    topNode ! Contains(testActor, id=44, 42)
+    expectMsg(ContainsResult(id=44, true))
+  }
+  
   test("behave identically to built-in set (includes GC)") {
     val rnd = new Random()
     def randomOperations(requester: ActorRef, count: Int): Seq[Operation] = {
