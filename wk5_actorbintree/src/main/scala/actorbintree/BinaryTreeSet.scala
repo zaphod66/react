@@ -201,7 +201,6 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     if(expected.isEmpty && insertConfirmed) {
       context.unbecome()
       context.parent ! CopyFinished
-      subtrees.values.foreach { _ ! PoisonPill }
     } else {
       context.become(copying(expected, insertConfirmed))
     }
