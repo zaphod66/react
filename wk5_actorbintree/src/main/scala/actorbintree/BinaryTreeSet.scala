@@ -88,9 +88,9 @@ class BinaryTreeSet extends Actor {
     case GC => ()
     
     case CopyFinished => {
-      root ! PoisonPill
       pendingQueue.foreach { newRoot ! _ }
       pendingQueue = Queue.empty[Operation]
+      root ! PoisonPill
       root = newRoot
       context.unbecome()
     }
@@ -134,7 +134,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           if (subtrees.contains(nextPos)) {
             subtrees(nextPos) ! Insert(requester, id, e)
           } else {
-            val newAct = context.actorOf(props(e, initiallyRemoved = false))
+            val newAct = context.actorOf(props(e, initiallyRemoved = false), name = "Node-"+e)
             subtrees = subtrees.updated(nextPos, newAct)
             requester ! OperationFinished(id)
           }
@@ -182,7 +182,6 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
 
         children.foreach { _ ! CopyTo(newRoot) }        
       }
-    case _ => ???
   }
 
   def nextBranch(e: Int) = if (e < elem) Left else Right
