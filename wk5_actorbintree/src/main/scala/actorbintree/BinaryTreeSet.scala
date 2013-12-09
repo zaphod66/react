@@ -88,9 +88,9 @@ class BinaryTreeSet extends Actor {
     case GC => ()
     
     case CopyFinished => {
-      root ! PoisonPill
       pendingQueue.foreach { newRoot ! _ }
       pendingQueue = Queue.empty[Operation]
+      root ! PoisonPill
       root = newRoot
       context.unbecome()
     }
@@ -119,6 +119,8 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
   // optional
   def receive = normal
 
+  def copyOpId = -1
+  
   // optional
   /** Handles `Operation` messages and `CopyTo` requests. */
   val normal: Receive = {
@@ -132,7 +134,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           if (subtrees.contains(nextPos)) {
             subtrees(nextPos) ! Insert(requester, id, e)
           } else {
-            val newAct = context.actorOf(props(e, initiallyRemoved = false))
+            val newAct = context.actorOf(props(e, initiallyRemoved = false), name = "Node-"+e)
             subtrees = subtrees.updated(nextPos, newAct)
             requester ! OperationFinished(id)
           }
@@ -170,7 +172,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
         val children = subtrees.values
         
         if (!removed) {
-          newRoot ! Insert(self, -1, elem)
+          newRoot ! Insert(self, copyOpId, elem)
           context.become(copying(children.toSet, false))
         } else if (children.isEmpty) {
           context.parent ! CopyFinished
@@ -180,7 +182,6 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
 
         children.foreach { _ ! CopyTo(newRoot) }        
       }
-    case _ => ???
   }
 
   def nextBranch(e: Int) = if (e < elem) Left else Right
@@ -190,7 +191,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     * `insertConfirmed` tracks whether the copy of this node to the new tree has been confirmed.
     */
   def copying(expected: Set[ActorRef], insertConfirmed: Boolean): Receive = {
-    case OperationFinished(-1) =>
+    case OperationFinished(copyOpId) =>
       checkFinished(expected, true)
     case CopyFinished =>
       checkFinished(expected - sender, insertConfirmed)    
