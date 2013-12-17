@@ -63,11 +63,41 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       sender ! OperationAck(id)
     case Get(key, id) =>
       sender ! GetResult(key, kv.get(key), id)
+      
+    case Replicas(replicas) =>
+      replicas foreach (r => {
+        if (r != self && !secondaries.contains(r)) {    // add new secondary
+          val replicator = context.actorOf(Replicator.props(r))
+          // Todo update new secondary
+          replicators += replicator
+          secondaries += (r -> replicator)
+        }
+      } )
+      
+      secondaries foreach (r => {   // there are registered secondaries which are not in the replica set
+        if (!replicas.contains(r._1)) {
+          context.stop(r._1)
+        }
+      })
   }
 
   /* TODO Behavior for the replica role. */
+  var expectedSeq = 0L
+        
   val replica: Receive = {
     case Get(key, id) =>
       sender ! GetResult(key, kv.get(key), id)
+    
+    case Snapshot(key, valueOption, seq) =>
+      if (seq < expectedSeq) {
+        sender !  SnapshotAck(key, seq)
+      } else if (seq == expectedSeq){
+        valueOption match {
+          case Some(value) => kv += (key -> value)
+          case None        => kv -= key
+        }
+        sender ! SnapshotAck(key, seq)
+        expectedSeq = seq + 1
+      }
   }
 }
