@@ -84,8 +84,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
         if (!replicas.contains(r._1)) {
           secondaries -= r._1
           replicators -= r._2
-          context.stop(r._1)
-          context.stop(r._2)
+          context.stop(r._2)    // stop replicator
         }
       })
   }
