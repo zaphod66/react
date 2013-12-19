@@ -12,6 +12,7 @@ import akka.actor.PoisonPill
 import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy
 import akka.util.Timeout
+import scala.language.postfixOps
 
 object Replica {
   sealed trait Operation {
@@ -57,26 +58,34 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
   val leader: Receive = {
     case Insert(key, value, id) =>
       kv += (key -> value)
+      replicators foreach { rep => rep ! Replicate(key, Some(value), id) }
       sender ! OperationAck(id)
     case Remove(key, id) =>
       kv -= key
+      replicators foreach { rep => rep ! Replicate(key, None, id) }
       sender ! OperationAck(id)
     case Get(key, id) =>
       sender ! GetResult(key, kv.get(key), id)
+    case Replicated(key, id) =>
       
     case Replicas(replicas) =>
-      replicas foreach (r => {
+      replicas foreach (r =>
         if (r != self && !secondaries.contains(r)) {    // add new secondary
           val replicator = context.actorOf(Replicator.props(r))
-          // Todo update new secondary
+
+          kv.foreach( keyValue => replicator ! Replicate(keyValue._1, Some(keyValue._2), 0L) )
+
           replicators += replicator
           secondaries += (r -> replicator)
         }
-      } )
+      )
       
       secondaries foreach (r => {   // there are registered secondaries which are not in the replica set
         if (!replicas.contains(r._1)) {
+          secondaries -= r._1
+          replicators -= r._2
           context.stop(r._1)
+          context.stop(r._2)
         }
       })
   }
@@ -89,6 +98,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       sender ! GetResult(key, kv.get(key), id)
     
     case Snapshot(key, valueOption, seq) =>
+//      println(s"Snapshot($key, $valueOption, $seq)")
       if (seq < expectedSeq) {
         sender !  SnapshotAck(key, seq)
       } else if (seq == expectedSeq){
