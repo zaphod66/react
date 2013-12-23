@@ -47,6 +47,8 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
   // the current set of replicators
   var replicators = Set.empty[ActorRef]
 
+  var persistor = context.actorOf(Persistence.props(false))
+  
   arbiter ! Join
   
   def receive = {
@@ -65,6 +67,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       replicators foreach { rep => rep ! Replicate(key, None, id) }
       sender ! OperationAck(id)
     case Get(key, id) =>
+      println(s"leader -> Get($key,$id) <- $sender")
       sender ! GetResult(key, kv.get(key), id)
     case Replicated(key, id) =>
       
@@ -91,16 +94,28 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
 
   /* TODO Behavior for the replica role. */
   var expectedSeq = 0L
-        
+
+  override def preStart(): Unit = {}
+  override def postStop(): Unit = {}
+
+  var replicaSenders = Map.empty[Long, ActorRef]
+  
   val replica: Receive = {
+    
     case Get(key, id) =>
+      println(s"replica -> Get($key,$id) <- $sender")
       sender ! GetResult(key, kv.get(key), id)
     
     case Snapshot(key, valueOption, seq) =>
-//      println(s"Snapshot($key, $valueOption, $seq)")
+      println(s"Snapshot($key, $valueOption, $seq)")
       if (seq < expectedSeq) {
-        sender !  SnapshotAck(key, seq)
-      } else if (seq == expectedSeq){
+        replicaSenders += (seq -> sender)
+        persistor ! Persist(key, valueOption, seq)
+        
+//      sender !  SnapshotAck(key, seq)
+      } else if (seq == expectedSeq) {
+        replicaSenders += (seq -> sender)
+        persistor ! Persist(key, valueOption, seq)
         valueOption match {
           case Some(value) => kv += (key -> value)
           case None        => kv -= key
@@ -108,5 +123,11 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
         sender ! SnapshotAck(key, seq)
         expectedSeq = seq + 1
       }
+    
+    case Persisted(key, id) =>
+      println(s"Persisted($key, $id)")
+      val req = replicaSenders(id)
+      req ! SnapshotAck(key, id)
+      replicaSenders -= id
   }
 }
