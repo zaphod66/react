@@ -27,6 +27,8 @@ object Replica {
   case class OperationFailed(id: Long) extends OperationReply
   case class GetResult(key: String, valueOption: Option[String], id: Long) extends OperationReply
 
+  case class GenerateFailure(id: Long)
+  
   def props(arbiter: ActorRef, persistenceProps: Props): Props = Props(new Replica(arbiter, persistenceProps))
 }
 
@@ -60,8 +62,6 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
     case JoinedPrimary   => context.become(leader)
     case JoinedSecondary => context.become(replica)
   }
-
-  case class GenerateFailure(id: Long)
 
   /* TODO Behavior for  the leader role. */
   val leader: Receive = LoggingReceive {
@@ -135,16 +135,15 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       }
 
     case GenerateFailure(id) =>
-      if(failureGenerators.contains(id)) {
-        if(persistRepeaters.contains(id)) {
+      if (failureGenerators.contains(id)) {
+        if (persistRepeaters.contains(id)) {
           persistRepeaters(id).cancel()
           persistRepeaters -= id
         }
         failureGenerators -= id
         
-        val origSender =
-          if(persistAcks.contains(id)) persistAcks(id)
-          else replicateAcks(id)._1
+        val origSender = if (persistAcks.contains(id)) persistAcks(id)
+                         else replicateAcks(id)._1
         persistAcks -= id
         replicateAcks -= id
         origSender ! OperationFailed(id)
