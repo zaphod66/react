@@ -197,7 +197,7 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
     
     case Snapshot(key, valueOption, seq) =>
 //    println(s"Snapshot($key, $valueOption, $seq)")
-      if(seq < snapshotSeq)
+      if (seq < snapshotSeq)
         sender ! SnapshotAck(key, seq)
 
       if (seq == snapshotSeq) {
