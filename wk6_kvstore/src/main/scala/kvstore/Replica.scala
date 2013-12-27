@@ -74,11 +74,9 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       kv += (key -> value)
       persistAcks += id -> sender
 
-      if(replicators.nonEmpty) {
+      if (replicators.nonEmpty) {
         replicateAcks += id -> (sender, replicators)
-        replicators.foreach { replicator =>
-          replicator ! Replicate(key, Some(value), id)
-        }
+        replicators foreach { rep => rep ! Replicate(key, Some(value), id) }
       }
 
       persistRepeaters += id -> context.system.scheduler.schedule(
@@ -93,11 +91,9 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       kv -= key
       persistAcks += id -> sender
 
-      if(replicators.nonEmpty) {
+      if (replicators.nonEmpty) {
         replicateAcks += id -> (sender, replicators)
-        replicators.foreach { replicator =>
-          replicator ! Replicate(key, None, id)
-        }
+        replicators foreach { rep => rep ! Replicate(key, None, id) }
       }
 
       persistRepeaters += id -> context.system.scheduler.schedule(
@@ -113,21 +109,22 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       persistRepeaters -= id
       val origSender = persistAcks(id)
       persistAcks -= id
-      if(!replicateAcks.contains(id)) {
+      if (!replicateAcks.contains(id)) {
         failureGenerators(id).cancel()
         failureGenerators -= id
         origSender ! OperationAck(id)
       }
 
     case Replicated(key, id) =>
-      if(replicateAcks.contains(id)) {
+      if (replicateAcks.contains(id)) {
         val (origSender, currAckSet) = replicateAcks(id)
         val newAckSet = currAckSet - sender
         if (newAckSet.isEmpty)
           replicateAcks -= id
         else
           replicateAcks = replicateAcks.updated(id, (origSender, newAckSet))
-        if(!replicateAcks.contains(id) && !persistAcks.contains(id)) {
+          
+        if (!replicateAcks.contains(id) && !persistAcks.contains(id)) {
           failureGenerators(id).cancel()
           failureGenerators -= id
           origSender ! OperationAck(id)
@@ -161,12 +158,11 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
         replicator
       }
 
-      removed.foreach( replica => secondaries(replica) ! PoisonPill )
+      removed foreach { replica => secondaries(replica) ! PoisonPill }
 
-      removed.foreach { replica =>
-        replicateAcks.foreach { case (id, (origSender, rs)) =>
-          if (rs.contains(secondaries(replica))) {
-            self.tell(Replicated("", id), secondaries(replica))
+      removed foreach { replica => replicateAcks foreach {
+          case (id, (origSender, rs)) => if (rs.contains(secondaries(replica))) {
+              self.tell(Replicated("", id), secondaries(replica))
           }
         }
       }
@@ -174,12 +170,11 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       replicators = replicators -- removed.map(secondaries) ++ addedReplicators
       secondaries = secondaries -- removed ++ addedSecondaries
 
-      addedReplicators.foreach { replicator =>
-        kv.zipWithIndex.foreach { case ((k,v), idx) =>
+      addedReplicators foreach { replicator =>
+        kv.zipWithIndex foreach { case ((k,v), idx) =>
           replicator ! Replicate(k, Some(v), idx)
         }
       }
-
   }
 
   /* TODO Behavior for the replica role. */
@@ -189,12 +184,12 @@ class Replica(val arbiter: ActorRef, persistenceProps: Props) extends Actor {
       sender ! GetResult(key, kv.get(key), id)
 
     case Snapshot(key, valueOption, seq) =>
-      if(seq < snapshotSeq)
+      if (seq < snapshotSeq)
         sender ! SnapshotAck(key, seq)
 
       if (seq == snapshotSeq) {
         valueOption match {
-          case None => kv -= key
+          case None        => kv -= key
           case Some(value) => kv += key -> value
         }
         snapshotSeq += 1
