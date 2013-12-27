@@ -6,8 +6,7 @@ import kvstore.Arbiter.{Replicas, JoinedSecondary, JoinedPrimary, Join}
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
-class Step7_CustomSpec
-  extends TestKit(ActorSystem("Step7CustomSpec"))
+class Step7_CustomSpec extends TestKit(ActorSystem("Step7CustomSpec"))
   with FunSuite
   with BeforeAndAfterAll
   with ShouldMatchers
